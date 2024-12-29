@@ -3,5 +3,8 @@
  **Key features of the project include:**
 
 + **Stock Market Analysis**: Retrieves and displays detailed analyst recommendations for publicly traded companies.
-+ **Real-Time News Aggregation**: Fetches the latest news articles about selected companies to keep users updated on recent developments.
-+ **Multi-Agent Collaboration**: Combines multiple AI agents to handle specific tasks like web search and financial analysis, improving task-specific performance.
++ **Real-Time News Aggregation**: This feature fetches the latest news articles about selected companies to keep users updated on recent developments.
++ **Multi-Agent Collaboration**: combines multiple AI agents to handle specific tasks, such as web search and financial analysis, improving task-specific performance.
+
+
+
