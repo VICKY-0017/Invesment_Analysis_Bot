@@ -77,34 +77,33 @@ def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
     
     return news_items, table_data, additional_info.strip()
 
-# Initialize Agents
-web_search_agent = Agent(
-    name="Web Search Agent",
-    role="Search the web for the information",
-    model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
-    tools=[DuckDuckGo()],
-    instructions=["Always include the sources"],
-    show_tool_calls=True,
-    markdown=True,
-)
-
-Finance_agent = Agent(
-    name="Finance AI Agent",
-    model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
-    tools=[YFinanceTools(
-        stock_price=True,
-        analyst_recommendations=True,
-        stock_fundamentals=True,
-        company_news=True,
-        company_info=True,
-    )],
-    instructions=["Use tables to display the data"],
-    show_tool_calls=True,
-    markdown=True,
-)
-
+# Initialize Multi-Agent
 multi_ai_agent = Agent(
-    team=[web_search_agent, Finance_agent],
+    team=[
+        Agent(
+            name="Web Search Agent",
+            role="Search the web for the information",
+            model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
+            tools=[DuckDuckGo()],
+            instructions=["Always include the sources"],
+            show_tool_calls=True,
+            markdown=True,
+        ),
+        Agent(
+            name="Finance AI Agent",
+            model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
+            tools=[YFinanceTools(
+                stock_price=True,
+                analyst_recommendations=True,
+                stock_fundamentals=True,
+                company_news=True,
+                company_info=True,
+            )],
+            instructions=["Use tables to display the data"],
+            show_tool_calls=True,
+            markdown=True,
+        )
+    ],
     model=Groq(id="llama-3.1-70b-versatile", api_key=groq_api_key),
     instructions=["Always include sources", "Use tables to show the data"],
     show_tool_calls=True,
@@ -119,20 +118,9 @@ st.title("Investment Analysis AI Agent")
 
 # Sidebar
 with st.sidebar:
-    st.title("Agent Selection")
-    agent_option = st.selectbox(
-        "Select an Agent",
-        ("Finance Agent", "Web Search Agent", "Multi AI Agent"),
-    )
+    st.title("Agent Information")
+    st.markdown("This agent uses both web search and finance tools to provide insights.")
     
-    st.markdown("### Agent Descriptions")
-    if agent_option == "Finance Agent":
-        st.info("Specializes in financial analysis and stock market data.")
-    elif agent_option == "Web Search Agent":
-        st.info("Searches the web for the latest news and information.")
-    else:
-        st.info("Combines both financial analysis and web search capabilities.")
-
 # Main content area
 query = st.text_input("Enter your query:", placeholder="e.g., 'Analyze NVDA stock performance and latest news'")
 
@@ -140,15 +128,10 @@ if st.button("Run Query", type="primary"):
     if not query:
         st.warning("Please enter a query!")
     else:
-        with st.spinner(f"Running analysis using {agent_option}..."):
+        with st.spinner(f"Running analysis using the Multi-Agent..."):
             try:
-                # Get response from selected agent
-                if agent_option == "Finance Agent":
-                    response = Finance_agent.run(query)
-                elif agent_option == "Web Search Agent":
-                    response = web_search_agent.run(query)
-                else:
-                    response = multi_ai_agent.run(query)
+                # Get response from the multi-agent
+                response = multi_ai_agent.run(query)
                 
                 # Process response
                 if response:
