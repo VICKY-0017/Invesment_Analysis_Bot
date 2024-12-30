@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from phi.model.groq import Groq
 import os
 import streamlit as st
-import json
 import pandas as pd
 from typing import Dict, Any
 
@@ -39,32 +38,48 @@ def parse_table_from_markdown(markdown_text: str) -> pd.DataFrame:
     except Exception:
         return None
 
-def format_response(response: str) -> Dict[str, Any]:
-    """Parse and structure the agent's response"""
-    result = {
-        "news": [],
-        "table": None,
-        "additional_info": ""
-    }
-    
-    # Split response into sections
-    sections = response.split('\n\n')
-    
-    for section in sections:
-        if "latest news" in section.lower():
-            # Extract news items
-            news_items = [item.strip() for item in section.split(',') if item.strip()]
-            result["news"] = news_items
-        elif '|' in section:
-            # Extract table data
-            result["table"] = parse_table_from_markdown(section)
-        elif "note" in section.lower() or "please" in section.lower():
-            # Extract additional information
-            result["additional_info"] = section.strip()
-    
-    return result
+def display_results(response_text: str):
+    """Display the results in a structured format"""
+    try:
+        # Split response into sections
+        sections = response_text.split('\n\n')
+        
+        cols = st.columns(2)
+        
+        # Left column for news
+        with cols[0]:
+            st.subheader("Latest News")
+            for section in sections:
+                if "latest news" in section.lower():
+                    news_items = [item.strip() for item in section.split('.') if item.strip()]
+                    for item in news_items:
+                        if item and len(item) > 10:  # Avoid empty or very short items
+                            st.markdown(f"""
+                                <div style="padding: 10px; border-left: 3px solid #0066cc; 
+                                margin: 10px 0; background-color: #f8f9fa;">
+                                    {item}.
+                                </div>
+                            """, unsafe_allow_html=True)
+        
+        # Right column for analysis
+        with cols[1]:
+            st.subheader("Analysis")
+            for section in sections:
+                if '|' in section:
+                    df = parse_table_from_markdown(section)
+                    if df is not None:
+                        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        # Additional information at the bottom
+        for section in sections:
+            if "note" in section.lower() or "please" in section.lower():
+                st.markdown("---")
+                st.info(section.strip())
 
-# Initialize Agents (same as before)
+    except Exception as e:
+        st.error(f"Error processing results: {str(e)}")
+
+# Initialize Agents
 web_search_agent = Agent(
     name="Web search Agent",
     role="Search the web for the information",
@@ -110,12 +125,6 @@ st.markdown("""
         max-width: 1200px;
         margin: 0 auto;
     }
-    .news-item {
-        padding: 10px;
-        border-left: 3px solid #0066cc;
-        margin: 10px 0;
-        background-color: #f8f9fa;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -146,41 +155,20 @@ if st.button("Run Query", type="primary"):
         st.warning("Please enter a query!")
     else:
         with st.spinner(f"Running analysis using {agent_option}..."):
-            # Get response from selected agent
-            if agent_option == "Finance Agent":
-                response = Finance_agent.print_response(query)
-            elif agent_option == "Web Search Agent":
-                response = web_search_agent.print_response(query)
-            else:
-                response = multi_ai_agent.print_response(query)
-            
-            # Parse and structure the response
-            structured_result = format_response(response)
-            
-            # Display results in organized sections
-            cols = st.columns(2)
-            
-            # Display news in left column
-            with cols[0]:
-                st.subheader("Latest News")
-                for news_item in structured_result["news"]:
-                    st.markdown(f"""
-                        <div class="news-item">
-                            {news_item}
-                        </div>
-                    """, unsafe_allow_html=True)
-            
-            # Display analysis in right column
-            with cols[1]:
-                if structured_result["table"] is not None:
-                    st.subheader("Analysis")
-                    st.dataframe(
-                        structured_result["table"],
-                        use_container_width=True,
-                        hide_index=True
-                    )
-            
-            # Display additional information
-            if structured_result["additional_info"]:
-                st.markdown("---")
-                st.info(structured_result["additional_info"])
+            try:
+                # Get response from selected agent
+                if agent_option == "Finance Agent":
+                    response = Finance_agent.run(query)
+                elif agent_option == "Web Search Agent":
+                    response = web_search_agent.run(query)
+                else:
+                    response = multi_ai_agent.run(query)
+                
+                # Display the structured results
+                if response and hasattr(response, 'content'):
+                    display_results(response.content)
+                else:
+                    st.error("No response received from the agent.")
+                    
+            except Exception as e:
+                st.error(f"Error running query: {str(e)}")
