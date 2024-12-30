@@ -9,75 +9,73 @@ from phi.model.groq import Groq
 import os
 import streamlit as st
 import pandas as pd
-from typing import Dict, Any
+import re
+from typing import Dict, Any, Tuple
 
 # Load environment variables
 load_dotenv()
 phi.api = os.getenv("Phidata_API")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
-def parse_table_from_markdown(markdown_text: str) -> pd.DataFrame:
-    """Extract table data from markdown text and convert to pandas DataFrame"""
-    try:
-        # Find table content
-        table_lines = [line.strip() for line in markdown_text.split('\n') if '|' in line]
-        if not table_lines:
-            return None
-        
-        # Parse headers
-        headers = [col.strip() for col in table_lines[0].split('|') if col.strip()]
-        
-        # Parse data rows
-        data = []
-        for line in table_lines[2:]:  # Skip header separator line
-            row_data = [col.strip() for col in line.split('|') if col.strip()]
-            if row_data:
-                data.append(row_data)
-        
-        return pd.DataFrame(data, columns=headers)
-    except Exception:
-        return None
-
-def display_results(response_text: str):
-    """Display the results in a structured format"""
-    try:
-        # Split response into sections
-        sections = response_text.split('\n\n')
-        
-        cols = st.columns(2)
-        
-        # Left column for news
-        with cols[0]:
-            st.subheader("Latest News")
-            for section in sections:
-                if "latest news" in section.lower():
-                    news_items = [item.strip() for item in section.split('.') if item.strip()]
-                    for item in news_items:
-                        if item and len(item) > 10:  # Avoid empty or very short items
-                            st.markdown(f"""
-                                <div style="padding: 10px; border-left: 3px solid #0066cc; 
-                                margin: 10px 0; background-color: #f8f9fa;">
-                                    {item}.
-                                </div>
-                            """, unsafe_allow_html=True)
-        
-        # Right column for analysis
-        with cols[1]:
-            st.subheader("Analysis")
-            for section in sections:
-                if '|' in section:
-                    df = parse_table_from_markdown(section)
-                    if df is not None:
-                        st.dataframe(df, use_container_width=True, hide_index=True)
-        
-        # Additional information at the bottom
-        for section in sections:
-            if "note" in section.lower() or "please" in section.lower():
-                st.markdown("---")
-                st.info(section.strip())
-
-    except Exception as e:
-        st.error(f"Error processing results: {str(e)}")
+def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
+    """
+    Extract news items and table data from the text
+    Returns: (news_items, dataframe, additional_info)
+    """
+    # Debug logging
+    st.write("Raw response:", text)  # Debug output
+    
+    news_items = []
+    table_data = None
+    additional_info = ""
+    
+    # Split text into lines
+    lines = text.split('\n')
+    current_section = None
+    table_lines = []
+    
+    for line in lines:
+        # Identify sections
+        if "latest news" in line.lower():
+            current_section = "news"
+            continue
+        elif "|" in line and "-|-" not in line:
+            current_section = "table"
+            table_lines.append(line)
+        elif "note:" in line.lower() or "please note" in line.lower():
+            current_section = "info"
+            additional_info += line + "\n"
+        # Process sections
+        elif current_section == "news" and line.strip():
+            news_items.extend([item.strip() for item in line.split('.') if item.strip()])
+        elif current_section == "table":
+            table_lines.append(line)
+        elif current_section == "info" and line.strip():
+            additional_info += line + "\n"
+    
+    # Process table if exists
+    if table_lines:
+        try:
+            # Remove empty columns
+            table_lines = [re.sub(r'\|\s*\|', '|', line) for line in table_lines]
+            # Remove leading/trailing |
+            table_lines = [line.strip('|') for line in table_lines]
+            
+            # Extract headers
+            headers = [col.strip() for col in table_lines[0].split('|')]
+            
+            # Extract data
+            data = []
+            for line in table_lines[2:]:  # Skip separator line
+                if line.strip():
+                    row = [cell.strip() for cell in line.split('|')]
+                    data.append(row)
+            
+            table_data = pd.DataFrame(data, columns=headers)
+        except Exception as e:
+            st.error(f"Error processing table: {str(e)}")
+    
+    return news_items, table_data, additional_info.strip()
 
 # Initialize Agents
 web_search_agent = Agent(
@@ -118,9 +116,16 @@ multi_ai_agent = Agent(
 # Streamlit Interface
 st.set_page_config(page_title="Investment Analysis AI Agent", layout="wide")
 
-# Custom CSS for better styling
+# Custom CSS
 st.markdown("""
     <style>
+    .news-item {
+        padding: 15px;
+        border-left: 4px solid #0066cc;
+        margin: 15px 0;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
     .stApp {
         max-width: 1200px;
         margin: 0 auto;
@@ -138,7 +143,6 @@ with st.sidebar:
         ("Finance Agent", "Web Search Agent", "Multi AI Agent"),
     )
     
-    # Add agent descriptions
     st.markdown("### Agent Descriptions")
     if agent_option == "Finance Agent":
         st.info("Specializes in financial analysis and stock market data.")
@@ -164,11 +168,46 @@ if st.button("Run Query", type="primary"):
                 else:
                     response = multi_ai_agent.run(query)
                 
-                # Display the structured results
-                if response and hasattr(response, 'content'):
-                    display_results(response.content)
+                # Process response
+                if response:
+                    response_text = response.content if hasattr(response, 'content') else str(response)
+                    
+                    # Extract and display information
+                    news_items, table_data, additional_info = extract_news_and_table(response_text)
+                    
+                    # Display results in columns
+                    col1, col2 = st.columns(2)
+                    
+                    # Display news
+                    with col1:
+                        st.subheader("Latest News")
+                        if news_items:
+                            for item in news_items:
+                                if len(item) > 10:  # Avoid empty or very short items
+                                    st.markdown(f"""
+                                        <div class="news-item">
+                                            {item}
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                        else:
+                            st.info("No news items found in the response.")
+                    
+                    # Display analysis
+                    with col2:
+                        st.subheader("Analysis")
+                        if table_data is not None and not table_data.empty:
+                            st.dataframe(table_data, use_container_width=True, hide_index=True)
+                        else:
+                            st.info("No analysis table found in the response.")
+                    
+                    # Display additional information
+                    if additional_info:
+                        st.markdown("---")
+                        st.info(additional_info)
+                
                 else:
                     st.error("No response received from the agent.")
                     
             except Exception as e:
-                st.error(f"Error running query: {str(e)}")
+                st.error(f"Error processing query: {str(e)}")
+                st.write("Full error details:", str(e))  # Debug output
