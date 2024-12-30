@@ -13,7 +13,13 @@
 **Access the Bot**: https://invesmentanalysisbot-8bwimmbk3kgxnc5nbrbqh7.streamlit.app/#latest-news
 
 
-![Bot](Screenshot 2024-12-30 123039.png)
+
+
+![Screenshot 2024-12-30 123039](https://github.com/user-attachments/assets/34158fa2-c2f4-4314-b28e-24d1fbadb9e4)
+
+
+
+
 
 
 
