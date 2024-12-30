@@ -22,60 +22,58 @@ def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
     Extract news items and table data from the text
     Returns: (news_items, dataframe, additional_info)
     """
+    # Debug logging
+    # st.write("Raw response:", text)  # Debug output
+    
     news_items = []
     table_data = None
     additional_info = ""
     
-    # Split text into sections
-    sections = text.split('\n\n')
+    # Split text into lines
+    lines = text.split('\n')
+    current_section = None
+    table_lines = []
     
-    for section in sections:
-        if "latest news" in section.lower():
-            # Extract news items, handling different formats
-            news_text = section.lower().replace("latest news", "").strip()
-            news_text = section.split("latest news")[-1].strip()
+    for line in lines:
+        # Identify sections
+        if "latest news" in line.lower():
+            current_section = "news"
+            continue
+        elif "|" in line and "-|-" not in line:
+            current_section = "table"
+            table_lines.append(line)
+        elif "note:" in line.lower() or "please note" in line.lower():
+            current_section = "info"
+            additional_info += line + "\n"
+        # Process sections
+        elif current_section == "news" and line.strip():
+            news_items.extend([item.strip() for item in line.split('.') if item.strip()])
+        elif current_section == "table":
+            table_lines.append(line)
+        elif current_section == "info" and line.strip():
+            additional_info += line + "\n"
+    
+    # Process table if exists
+    if table_lines:
+        try:
+            # Remove empty columns
+            table_lines = [re.sub(r'\|\s*\|', '|', line) for line in table_lines]
+            # Remove leading/trailing |
+            table_lines = [line.strip('|') for line in table_lines]
             
-            # Split by multiple possible delimiters
-            for delimiter in ['. ', ', ']:
-                if delimiter in news_text:
-                    items = news_text.split(delimiter)
-                    news_items.extend([item.strip() for item in items if item.strip()])
-                    break
+            # Extract headers
+            headers = [col.strip() for col in table_lines[0].split('|')]
             
-            if not news_items and news_text:  # If no delimiters found but text exists
-                news_items.append(news_text)
+            # Extract data
+            data = []
+            for line in table_lines[2:]:  # Skip separator line
+                if line.strip():
+                    row = [cell.strip() for cell in line.split('|')]
+                    data.append(row)
             
-            # Clean up news items
-            news_items = [item.strip(' .,') for item in news_items if item.strip()]
-            news_items = [item for item in news_items if len(item) > 10]  # Remove very short items
-            
-        elif '|' in section:
-            # Process table data
-            table_lines = [line.strip() for line in section.split('\n') if '|' in line]
-            if table_lines:
-                try:
-                    # Clean up table lines
-                    table_lines = [re.sub(r'\|\s*\|', '|', line) for line in table_lines]
-                    table_lines = [line.strip('|') for line in table_lines]
-                    
-                    # Extract headers
-                    headers = [col.strip() for col in table_lines[0].split('|')]
-                    
-                    # Extract data
-                    data = []
-                    for line in table_lines[2:]:  # Skip separator line
-                        if line.strip():
-                            row = [cell.strip() for cell in line.split('|')]
-                            if len(row) == len(headers):  # Only include rows that match header count
-                                data.append(row)
-                    
-                    if data:  # Only create DataFrame if we have data
-                        table_data = pd.DataFrame(data, columns=headers)
-                except Exception as e:
-                    st.error(f"Error processing table: {str(e)}")
-        
-        elif "note:" in section.lower() or "please note" in section.lower():
-            additional_info += section.strip() + "\n"
+            table_data = pd.DataFrame(data, columns=headers)
+        except Exception as e:
+            st.error(f"Error processing table: {str(e)}")
     
     return news_items, table_data, additional_info.strip()
 
@@ -121,15 +119,16 @@ st.set_page_config(page_title="Investment Analysis AI Agent", layout="wide")
 # Custom CSS
 st.markdown("""
     <style>
+    .news-item {
+        padding: 15px;
+        border-left: 4px solid #0066cc;
+        margin: 15px 0;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
     .stApp {
         max-width: 1200px;
         margin: 0 auto;
-    }
-    .element-container {
-        margin-bottom: 1rem;
-    }
-    div[data-testid="stVerticalBlock"] > div:has(div.element-container) {
-        gap: 1rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -173,10 +172,6 @@ if st.button("Run Query", type="primary"):
                 if response:
                     response_text = response.content if hasattr(response, 'content') else str(response)
                     
-                    # Add debug output
-                    st.text("Debug - Raw Response:")
-                    st.code(response_text)
-                    
                     # Extract and display information
                     news_items, table_data, additional_info = extract_news_and_table(response_text)
                     
@@ -188,21 +183,12 @@ if st.button("Run Query", type="primary"):
                         st.subheader("Latest News")
                         if news_items:
                             for item in news_items:
-                                st.markdown(
-                                    f"""
-                                    <div style="
-                                        padding: 1rem;
-                                        background-color: white;
-                                        border-radius: 0.5rem;
-                                        margin-bottom: 1rem;
-                                        border-left: 4px solid #0066cc;
-                                        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-                                    ">
-                                        <p style="margin: 0; color: #1f1f1f;">{item}</p>
-                                    </div>
-                                    """, 
-                                    unsafe_allow_html=True
-                                )
+                                if len(item) > 10:  # Avoid empty or very short items
+                                    st.markdown(f"""
+                                        <div class="news-item">
+                                            {item}
+                                        </div>
+                                    """, unsafe_allow_html=True)
                         else:
                             st.info("No news items found in the response.")
                     
@@ -210,7 +196,7 @@ if st.button("Run Query", type="primary"):
                     with col2:
                         st.subheader("Analysis")
                         if table_data is not None and not table_data.empty:
-                            st.dataframe(table_data, use_container_width=True)
+                            st.dataframe(table_data, use_container_width=True, hide_index=True)
                         else:
                             st.info("No analysis table found in the response.")
                     
@@ -224,4 +210,4 @@ if st.button("Run Query", type="primary"):
                     
             except Exception as e:
                 st.error(f"Error processing query: {str(e)}")
-                st.write("Full error details:", str(e))
+                st.write("Full error details:", str(e))  # Debug output
