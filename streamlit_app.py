@@ -70,7 +70,7 @@ if st.button("Run Query"):
     if agent_option == "Finance Agent":
         st.header("Finance Agent Results")
         if query:
-            result = Finance_agent.run(query)
+            result = Finance_agent.print_response(query)
             st.markdown(result)
         else:
             st.warning("Please enter a query!")
@@ -78,7 +78,7 @@ if st.button("Run Query"):
     elif agent_option == "Web Search Agent":
         st.header("Web Search Agent Results")
         if query:
-            result = web_search_agent.run(query)
+            result = web_search_agent.print_response(query)
             st.markdown(result)
         else:
             st.warning("Please enter a query!")
@@ -86,7 +86,7 @@ if st.button("Run Query"):
     elif agent_option == "Multi AI Agent":
         st.header("Multi AI Agent Results")
         if query:
-            result = multi_ai_agent.run(query)
+            result = multi_ai_agent.print_response(query)
             st.markdown(result)
         else:
             st.warning("Please enter a query!")
