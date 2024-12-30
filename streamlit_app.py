@@ -19,12 +19,9 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 
 def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
     """
-    Extract news items and table data from the text
+    Extract news items and table data from the text.
     Returns: (news_items, dataframe, additional_info)
     """
-    # Debug logging
-    # st.write("Raw response:", text)  # Debug output
-    
     news_items = []
     table_data = None
     additional_info = ""
@@ -79,7 +76,7 @@ def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
 
 # Initialize Agents
 web_search_agent = Agent(
-    name="Web search Agent",
+    name="Web Search Agent",
     role="Search the web for the information",
     model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
     tools=[DuckDuckGo()],
@@ -91,15 +88,13 @@ web_search_agent = Agent(
 Finance_agent = Agent(
     name="Finance AI Agent",
     model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
-    tools=[
-        YFinanceTools(
-            stock_price=True,
-            analyst_recommendations=True,
-            stock_fundamentals=True,
-            company_news=True,
-            company_info=True,
-        ),
-    ],
+    tools=[YFinanceTools(
+        stock_price=True,
+        analyst_recommendations=True,
+        stock_fundamentals=True,
+        company_news=True,
+        company_info=True,
+    )],
     instructions=["Use tables to display the data"],
     show_tool_calls=True,
     markdown=True,
@@ -116,7 +111,7 @@ multi_ai_agent = Agent(
 # Streamlit Interface
 st.set_page_config(page_title="Investment Analysis AI Agent", layout="wide")
 
-# Custom CSS
+# Custom CSS for professional UI
 st.markdown("""
     <style>
     .news-item {
@@ -129,6 +124,26 @@ st.markdown("""
     .stApp {
         max-width: 1200px;
         margin: 0 auto;
+    }
+    .header-title {
+        font-size: 2.5em;
+        color: #333;
+    }
+    .section-title {
+        font-size: 1.5em;
+        color: #0066cc;
+        margin-bottom: 10px;
+    }
+    .info-box {
+        padding: 20px;
+        background-color: #f4f4f9;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+    .data-table {
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background-color: #ffffff;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -147,7 +162,7 @@ with st.sidebar:
     if agent_option == "Finance Agent":
         st.info("Specializes in financial analysis and stock market data.")
     elif agent_option == "Web Search Agent":
-        st.info("Searches the web for latest news and information.")
+        st.info("Searches the web for the latest news and information.")
     else:
         st.info("Combines both financial analysis and web search capabilities.")
 
