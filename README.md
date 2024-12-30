@@ -15,4 +15,5 @@
 
 
 
-!(Screenshot 2024-12-30 123039.png)
+![Bot](./Screenshot 2024-12-30 123039.png)
+
