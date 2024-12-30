@@ -19,7 +19,7 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 
 def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
     """
-    Extract news items and table data from the text.
+    Extract and filter news items, table data, and additional information
     Returns: (news_items, dataframe, additional_info)
     """
     news_items = []
@@ -32,7 +32,10 @@ def extract_news_and_table(text: str) -> Tuple[list, pd.DataFrame, str]:
     table_lines = []
     
     for line in lines:
-        # Identify sections
+        # Skip function calls and irrelevant lines
+        if "transfer_task_to_" in line.lower():
+            continue  # Skip these lines
+        
         if "latest news" in line.lower():
             current_section = "news"
             continue
