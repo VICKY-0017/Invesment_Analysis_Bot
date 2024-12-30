@@ -111,43 +111,7 @@ multi_ai_agent = Agent(
 # Streamlit Interface
 st.set_page_config(page_title="Investment Analysis AI Agent", layout="wide")
 
-# Custom CSS for professional UI
-st.markdown("""
-    <style>
-    .news-item {
-        padding: 15px;
-        border-left: 4px solid #0066cc;
-        margin: 15px 0;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-    }
-    .stApp {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    .header-title {
-        font-size: 2.5em;
-        color: #333;
-    }
-    .section-title {
-        font-size: 1.5em;
-        color: #0066cc;
-        margin-bottom: 10px;
-    }
-    .info-box {
-        padding: 20px;
-        background-color: #f4f4f9;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-    }
-    .data-table {
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        background-color: #ffffff;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
+# Page Title
 st.title("Investment Analysis AI Agent")
 
 # Sidebar
@@ -199,11 +163,7 @@ if st.button("Run Query", type="primary"):
                         if news_items:
                             for item in news_items:
                                 if len(item) > 10:  # Avoid empty or very short items
-                                    st.markdown(f"""
-                                        <div class="news-item">
-                                            {item}
-                                        </div>
-                                    """, unsafe_allow_html=True)
+                                    st.write(f"- {item}")
                         else:
                             st.info("No news items found in the response.")
                     
@@ -218,6 +178,7 @@ if st.button("Run Query", type="primary"):
                     # Display additional information
                     if additional_info:
                         st.markdown("---")
+                        st.subheader("Additional Information")
                         st.info(additional_info)
                 
                 else:
