@@ -83,7 +83,7 @@ multi_ai_agent = Agent(
         Agent(
             name="Web Search Agent",
             role="Search the web for the information",
-            model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
+            model=Groq(id="qwen-2.5-32b", api_key=groq_api_key),
             tools=[DuckDuckGo()],
             instructions=["Always include the sources"],
             show_tool_calls=True,
@@ -91,7 +91,7 @@ multi_ai_agent = Agent(
         ),
         Agent(
             name="Finance AI Agent",
-            model=Groq(id="llama3-groq-70b-8192-tool-use-preview", api_key=groq_api_key),
+            model=Groq(id="qwen-2.5-32b", api_key=groq_api_key),
             tools=[YFinanceTools(
                 stock_price=True,
                 analyst_recommendations=True,
@@ -104,7 +104,7 @@ multi_ai_agent = Agent(
             markdown=True,
         )
     ],
-    model=Groq(id="llama-3.1-70b-versatile", api_key=groq_api_key),
+    model=Groq(id="qwen-2.5-32b", api_key=groq_api_key),
     instructions=["Always include sources", "Use tables to show the data"],
     show_tool_calls=True,
     markdown=True,
