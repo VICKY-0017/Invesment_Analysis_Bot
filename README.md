@@ -10,7 +10,7 @@
 
 
 
-**Access the Bot**: https://invesmentanalysisbot-8bwimmbk3kgxnc5nbrbqh7.streamlit.app/#latest-news
+**Access the Bot**: https://vicky-0017-invesment-analysis-bot-streamlit-app-uldaup.streamlit.app/
 
 
 
