@@ -50,7 +50,7 @@ The **Investment Analysis Bot** is a multi-agent AI-powered tool designed to hel
 
 ---
 
-## ⚙️ Optional: Setup Instructions (If you plan to share the code)
+## ⚙️ Optional: Setup Instructions 
 
 ```bash
 # Clone the repository
